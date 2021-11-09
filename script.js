@@ -420,7 +420,7 @@ class NatResource {
             return;
         } else {
             if (this.activated || this.exploding) {
-                let opacity = 1 - (this.detonTime - this.timer) / (this.initDetonTime * 2);
+                let opacity = 1 - (this.detonTime - this.timer) / (this.initDetonTime * 12);
                 if (this.exploding) opacity = 1;
                 ctxEXP.fillStyle = "rgba(255, 162, 162, " + opacity + ")";
                 ctxEXP.beginPath();

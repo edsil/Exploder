@@ -2,14 +2,38 @@
 
 // Global Variables
 const aiExploder = true;
+let myExploder1;
+let myExploder2;
+
+
+// Sound Effects
+class soundFxs {
+    constructor(soundFile, instances) {
+        this.instances = instances;
+        this.samples = [];
+        for (let i = 0; i < instances; i++) {
+            this.samples.push(new Audio(soundFile));
+        }
+        this.currInstance = 0;
+    }
+    play() {
+        this.samples[this.currInstance].play();
+        this.currInstance += 1;
+        if (this.currInstance >= this.instances) this.currInstance = 0;
+    }
+}
+
+let pickUpSnd = new soundFxs("coins01.mp3", 10);
+let endPickUpSnd = new soundFxs("coinsEnd.mp3", 5);
+let explosionSnd = new soundFxs("explosion.mp3", 5);
 
 // Array storing items
-const resouceTypes = []; // All possible resources
-const natResources = []; // Resources placed in the world
-const resources = []; // Reserouces available after natural resource explodes
-const inventory = []; // Resources owned by the exploder
-const natResTypes = [];
-const exploders = [];
+let resouceTypes = []; // All possible resources
+let natResources = []; // Resources placed in the world
+let resources = []; // Reserouces available after natural resource explodes
+let inventory = []; // Resources owned by the exploder
+let natResTypes = [];
+let exploders = [];
 
 // Main Canvas
 const canvas = document.getElementById('canvas1');
@@ -224,13 +248,11 @@ function handleExploder() {
         exploders[i].update();
         exploders[i].draw();
     }
+    if (exploders[0].health <= 0) {
+        init();
+    }
 }
-let myExploder1 = new Exploder(eType1, 100, 100);
-exploders.push(myExploder1);
-if (aiExploder) {
-    let myExploder2 = new Exploder(eType2, 300, 300);
-    exploders.push(myExploder2);
-}
+
 
 function runAutoExploder() {
     if (aiExploder) {
@@ -308,6 +330,11 @@ class ResourceExploded {
             if (boxCollision(exploders[j], this.space)) {
                 for (let i = 0; i < this.pieces.length; i++) {
                     if (boxCollision(exploders[j], this.pieces[i])) {
+                        if (this.pieces.length <= 1) {
+                            endPickUpSnd.play();
+                        } else {
+                            pickUpSnd.play();
+                        }
                         let p = this.pieces[i];
                         ctx.clearRect(p.x, p.y, p.width, p.height);
                         exploders[j].cash += this.valueTotal / this.quantity;
@@ -383,6 +410,7 @@ class NatResource {
                 this.activated = false;
                 this.currImage = this.images[2];
                 this.exploding = true;
+                explosionSnd.play();
             } else {
                 this.currImage = this.images[1];
             }
@@ -420,7 +448,7 @@ class NatResource {
             return;
         } else {
             if (this.activated || this.exploding) {
-                let opacity = 1 - (this.detonTime - this.timer) / (this.initDetonTime * 70);
+                let opacity = 1 - 2 * (this.detonTime - this.timer) / (this.initDetonTime);
                 if (this.exploding) opacity = 1;
                 ctxEXP.fillStyle = "rgba(255, 162, 162, " + opacity + ")";
                 ctxEXP.beginPath();
@@ -433,8 +461,6 @@ class NatResource {
         }
     }
 }
-
-
 
 function handleWorldResources() {
     ctxEXP.clearRect(0, 0, expCanvas.width, expCanvas.height);
@@ -459,21 +485,6 @@ function handleWorldResources() {
         natResources.push(res1);
     }
 }
-
-
-function animate() {
-    frame += 1;
-    runAutoExploder();
-    handleExploder();
-    handleWorldResources();
-    handleResourcesExploded();
-    updateMenu();
-    requestAnimationFrame(animate);
-}
-animate();
-
-
-
 
 function boxCollision(first, second) {
     if (!(first.x > second.x + second.width ||
@@ -532,10 +543,39 @@ function boxCircleCollision(rect, circle) {
             x1 < yIntersect && yIntersect < x2);
     }
 
-    return is_in
+    return is_in;
 
 }
 
+
+function init() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctxEXP.clearRect(0, 0, expCanvas.width, expCanvas.height);
+    resouceTypes = []; // All possible resources
+    natResources = []; // Resources placed in the world
+    resources = []; // Reserouces available after natural resource explodes
+    inventory = []; // Resources owned by the exploder
+    natResTypes = [];
+    exploders = [];
+    myExploder1 = new Exploder(eType1, 100, 100);
+    exploders.push(myExploder1);
+    if (aiExploder) {
+        myExploder2 = new Exploder(eType2, 300, 300);
+        exploders.push(myExploder2);
+    }
+}
+
+function animate() {
+    frame += 1;
+    runAutoExploder();
+    handleExploder();
+    handleWorldResources();
+    handleResourcesExploded();
+    updateMenu();
+    requestAnimationFrame(animate);
+}
+init();
+animate();
 
 // Test showing all walkers
 /*

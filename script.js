@@ -23,9 +23,9 @@ class soundFxs {
     }
 }
 
-let pickUpSnd = new soundFxs("coins01.mp3", 10);
-let endPickUpSnd = new soundFxs("coinsEnd.mp3", 5);
-let explosionSnd = new soundFxs("explosion.mp3", 5);
+let pickUpSnd = new soundFxs("./Sounds/coins01.mp3", 10);
+let endPickUpSnd = new soundFxs("./Sounds/coinsEnd.mp3", 5);
+let explosionSnd = new soundFxs("./Sounds/explosion.mp3", 5);
 
 // Array storing items
 let resouceTypes = []; // All possible resources
@@ -44,7 +44,7 @@ let canvasPosition = canvas.getBoundingClientRect();
 const canvasBKG = document.getElementById('background');
 const ctxBKG = canvasBKG.getContext('2d');
 let canvasBackground = new Image();
-canvasBackground.src = "waterdrops.jpg";
+canvasBackground.src = "./Images/waterdrops.jpg";
 
 // Explosions Canvas
 const expCanvas = document.getElementById('explosions');
@@ -486,6 +486,65 @@ function handleWorldResources() {
     }
 }
 
+
+class spriteAnimator {
+    constructor(spriteSheetName,
+        cellWidth, cellHeight, padLeft, padTop, spriteWidth, spriteHeight, scale,
+        speed, rowsColumnsSequence) {
+        // speed - from 0(slowest) to 1(fastest)
+        // scale - how much to increase (>1) or decrease (<1) the sprite
+        // rowsColumnsSequence is an array with arrays => [[0,0], [0,1], [0,2]...]
+        this.sprite = new Image();
+        this.sprite.src = spriteSheetName;
+        this.cellW = cellWidth;
+        this.cellH = cellHeight;
+        this.padLeft = padLeft;
+        this.padTop = padTop;
+        this.sprW = spriteWidth;
+        this.sprH = spriteHeight;
+        this.scale = scale;
+        this.aSlower = 100 - speed * 100;
+        this.sequence = rowsColumnsSequence;
+        this.data = [];
+        for (let i = 0; i < this.sequence.length; i++) {
+            let sx = this.sequence[i][0] * this.cellH + this.padLeft;
+            let sy = this.sequence[i][1] * this.cellH + this.padTop;
+            let dWidth = Math.floor(this.scale * this.sprW);
+            let dHeight = Math.floor(this.scale * this.sprH);
+            this.data.push([sx, sy, this.sprW, this.sprH, dWidth, dHeight]);
+        }
+        this.timer = 0;
+        this.counter = 0;
+        this.preX = -1;
+        this.preY = -1;
+    }
+
+    draw(x, y) {
+        this.timer += 1;
+        if (this.timer >= this.aSlower) {
+            this.timer = 0;
+            if (this.counter >= this.data.length) {
+                this.counter = 0;
+            }
+            if (this.preX > 0) {
+                ctx.clearRect(this.preX, this.preY, this.sprW, this.sprH);
+            }
+            this.preX = x;
+            this.preY = y;
+            ctx.drawImage(this.sprite,
+                this.data[counter][0], this.data[counter][1],
+                this.data[counter][2], this.data[counter][3],
+                x, y,
+                this.data[counter][4], this.data[counter][5]);
+            this.counter += 1;
+        }
+    }
+
+    setSprite(n) {
+        this.counter = n;
+    }
+}
+
 function boxCollision(first, second) {
     if (!(first.x > second.x + second.width ||
         first.x + first.width < second.x ||
@@ -577,9 +636,6 @@ function animate() {
 init();
 animate();
 
-// Test showing all walkers
-/*
-// Images
 
 const walkingImage = new Image();
 walkingImage.src = 'walking.png'; // Image: 21,45; Cell: 64, 60
@@ -591,48 +647,4 @@ const walking = {
 
 
 
-class animateSprite {
-    constructor(sprite, row, x, y, speed) {
-        this.sprite = sprite;
-        this.cols = 0;
-        this.x = x;
-        this.y = y;
-        this.row = row;
-        this.aSlower = speed;
 
-    }
-
-    loadAttributes() {
-        this.image = this.sprite.image;
-        this.col = 0;
-        this.counter = 0;
-        this.cols = Math.floor(this.sprite.image.width / this.sprite.cellSize.x);
-        this.cellSize = this.sprite.cellSize;
-        this.spriteSize = this.sprite.spriteSize;
-    }
-
-    animate() {
-        if (this.cols != 0) {
-            if (++this.counter >= this.aSlower) {
-                this.counter = 0;
-                ctx.clearRect(this.x, this.y, 50, 100);
-                ctx.drawImage(this.image,
-                    this.col * this.cellSize.x, this.row * this.cellSize.y,
-                    this.spriteSize.x, this.spriteSize.y,
-                    this.x, this.y, 5 + 8 * (this.row), 10 + 16 * (this.row));
-                this.col = this.col + 1;
-                if (this.col > this.cols) this.col = 0;
-            }
-        } else if (this.sprite.image.width != 0) {
-            this.loadAttributes();
-        }
-        requestAnimationFrame(this.animate.bind(this));
-    }
-}
-rubish = [];
-for (let i = 0; i < 8; i++) {
-    let x = new animateSprite(walking, i, 100 + i * 50, 50 + i * 50, 4 * i + 7);
-    x.animate();
-    rubish.push(x);
-}
-*/

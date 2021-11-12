@@ -1,9 +1,16 @@
 'use strict';
 
 // Global Variables
-const aiExploder = true;
+const aiExploder = false;
 let myExploder1;
 let myExploder2;
+let sprBackWalk, sprFrontWalk, sprLeftWalk, sprRightWalk;
+let sprBackStop, sprFrontStop, sprLeftStop, sprRightStop;
+let positions = {
+    UP_WALKING: 0, LEFT_WALKING: 1, DOWN_WALKING: 2, RIGHT_WALKING: 3,
+    UP_STOPPED: 4, LEFT_STOPPED: 5, DOWN_STOPPED: 6, RIGHT_STOPPED: 7
+};
+
 
 
 // Sound Effects
@@ -167,11 +174,133 @@ function updateMenu() {
 
 
 // Exploder
+// Sprite animation controller
+class spriteAnimator {
+    constructor(spriteSheetName,
+        cellWidth, cellHeight,
+        padLeft, padTop,
+        spriteWidth, spriteHeight,
+        scale, speed, rowsColumnsSequence) {
+        // scale - how much to increase (>1) or decrease (<1) the sprite
+        // speed - from 0(slowest) to 1(fastest)
+        // rowsColumnsSequence is an array with arrays => [[0,0], [0,1], [0,2]...]
+        this.sprite = new Image();
+        this.sprite.src = spriteSheetName;
+        this.cellW = cellWidth;
+        this.cellH = cellHeight;
+        this.padLeft = padLeft;
+        this.padTop = padTop;
+        this.sprW = spriteWidth;
+        this.sprH = spriteHeight;
+        this.scale = scale;
+        this.aSlower = 100 - speed * 100;
+        this.sequence = rowsColumnsSequence;
+        this.data = [];
+        this.width = Math.floor(this.scale * this.sprW);
+        this.height = Math.floor(this.scale * this.sprH);
+        for (let i = 0; i < this.sequence.length; i++) {
+            if ('row' in this.sequence[i] && 'cols' in this.sequence[i]) {
+                let sy = this.sequence[i].row * this.cellH + this.padTop;
+                for (let x = this.sequence[i].cols[0]; x <= this.sequence[i].cols[1]; x++) {
+                    let sx = x * this.cellW + this.padLeft;
+                    this.data.push([sx, sy]);
+                }
+            } else if ('col' in this.sequence[i] && 'rows' in this.sequence[i]) {
+                let sx = this.sequence[i].col * this.cellW + this.padLeft;
+                for (let y = this.sequence[i].rows[0]; x <= this.sequence[i].rows[1]; y++) {
+                    let sy = y * this.cellH + this.padTop;
+                    this.data.push([sx, sy]);
+                }
+            } else
+                throw 'Wrong sequencing. Format must be [{row: 0, cols: [0, 7]}, {rows: [0, 3], col: 2}]';
+        }
+        this.timer = 0;
+        this.counter = 0;
+        this.preX = -1;
+        this.preY = -1;
+    }
+
+    draw(x, y) {
+        this.timer += 1;
+        if (this.timer >= this.aSlower) {
+            this.timer = 0;
+            this.counter += 1;
+            if (this.counter >= this.data.length) {
+                this.counter = 0;
+            }
+        }
+        ctx.drawImage(this.sprite,
+            this.data[this.counter][0], this.data[this.counter][1],
+            this.sprW, this.sprH, x, y, this.width, this.height);
+    }
+
+    setSprite(n) {
+        this.counter = n;
+    }
+}
+
+// Sprites
+function initSprites() {
+    let size = 2;
+    let speed = 0.95;
+    let padLeft = 6;
+    let padTop = 13;
+    let spriteWidth = 49;
+    let spriteHeight = 51;
+    let param = ['./Images/eduCreation.png',
+        64, 64, padLeft, padTop,
+        spriteWidth, spriteHeight,
+        size, speed, []];
+
+    // Back Walking
+    param[9] = [{ row: 8, cols: [1, 8] }];
+    sprBackWalk = new spriteAnimator(...param);
+
+    // Left walking
+    param[9] = [{ row: 9, cols: [1, 8] }];
+    sprLeftWalk = new spriteAnimator(...param);
+
+    // Front walking
+    param[9] = [{ row: 10, cols: [1, 8] }];;
+    sprFrontWalk = new spriteAnimator(...param);
+
+    // Right walking
+    param[9] = [{ row: 11, cols: [1, 8] }];
+    sprRightWalk = new spriteAnimator(...param);
+
+    param[8] = 0.9;
+    // Back Stopped
+    param[9] = [{ row: 0, cols: [0, 6] }];
+    sprBackStop = new spriteAnimator(...param);
+
+    // Left Stopped
+    param[9] = [{ row: 1, cols: [0, 6] }];
+    sprLeftStop = new spriteAnimator(...param);
+
+    // Front Stopped
+    param[9] = [{ row: 2, cols: [0, 6] }];;
+    sprFrontStop = new spriteAnimator(...param);
+
+    // Right Stopped
+    param[9] = [{ row: 3, cols: [0, 6] }];
+    sprRightStop = new spriteAnimator(...param);
+}
+
+
+initSprites();
 const eType1 = {
     image: 'blue', // to be replace with an image later, for now it will be a square
     power: 100, // Initial exploder power
     health: 100, //Initial exploere health
     cash: 100, // Initial exploder cash
+    spriteUpWalking: sprBackWalk,
+    spriteLeftWalking: sprLeftWalk,
+    spriteDownWalking: sprFrontWalk,
+    spriteRightWalking: sprRightWalk,
+    spriteUpStopped: sprBackStop,
+    spriteLeftStopped: sprLeftStop,
+    spriteDownStopped: sprFrontStop,
+    spriteRightStopped: sprRightStop,
     height: 2,
     width: 1,
     speed: 3,
@@ -183,8 +312,14 @@ const eType2 = {
     power: 100, // Initial exploder power
     health: 100, //Initial exploere health
     cash: 100, // Initial exploder cash
-    height: 1.5,
-    width: 0.75,
+    spriteUpWalking: sprBackWalk,
+    spriteLeftWalking: sprLeftWalk,
+    spriteDownWalking: sprFrontWalk,
+    spriteRightWalking: sprRightWalk,
+    spriteUpStopped: sprBackStop,
+    spriteLeftStopped: sprLeftStop,
+    spriteDownStopped: sprFrontStop,
+    spriteRightStopped: sprRightStop,
     speed: 1,
     control: 0,
 }
@@ -195,19 +330,46 @@ class Exploder {
         this.power = eType.power;
         this.health = eType.health;
         this.cash = eType.cash;
-        this.height = Math.floor(eType.height * cellSize);
-        this.width = Math.floor(eType.width * cellSize);
         this.speed = eType.speed;
         this.control = eType.control;
         this.x = x;
         this.y = y;
+        this.preX = this.x;
+        this.preY = this.y;
+        this.sprites = [eType.spriteUpWalking, eType.spriteLeftWalking, eType.spriteDownWalking,
+        eType.spriteRightWalking, eType.spriteUpStopped, eType.spriteLeftStopped,
+        eType.spriteDownStopped, eType.spriteRightStopped];
+        this.lastMove = positions.DOWN_STOPPED;
+        this.currSprite = this.sprites[this.lastMove];
+        this.width = 0;
+        this.height = 0;
+        for (let i = 0; i < this.sprites.length; i++) {
+            this.width = Math.max(this.width, this.sprites[i].width);
+            this.height = Math.max(this.height, this.sprites[i].height);
+        }
     }
 
     update() {
-        if (controlers[this.control].up) this.y -= this.speed;
-        if (controlers[this.control].down) this.y += this.speed;
-        if (controlers[this.control].left) this.x -= this.speed;
-        if (controlers[this.control].right) this.x += this.speed;
+        if (this.lastMove < positions.UP_STOPPED) {
+            this.lastMove += 4;
+        }
+        if (controlers[this.control].up) {
+            this.y -= this.speed;
+            this.lastMove = positions.UP_WALKING;
+        }
+        if (controlers[this.control].down) {
+            this.y += this.speed;
+            this.lastMove = positions.DOWN_WALKING;
+        }
+        if (controlers[this.control].left) {
+            this.x -= this.speed;
+            this.lastMove = positions.LEFT_WALKING;
+        }
+        if (controlers[this.control].right) {
+            this.x += this.speed;
+            this.lastMove = positions.RIGHT_WALKING;
+        }
+        this.currSprite = this.sprites[this.lastMove];
         if (wrap) {
             if (this.x < 0) {
                 this.x = canvas.width;
@@ -233,18 +395,15 @@ class Exploder {
         }
     }
 
-    clear() {
-        ctx.clearRect(this.x, this.y, this.width, this.height);
-    }
-
     draw() {
-        ctx.fillStyle = this.image;
-        ctx.fillRect(this.x, this.y, this.width, this.height);
+        ctx.clearRect(this.preX, this.preY, this.width, this.height);
+        this.currSprite.draw(this.x, this.y);
+        this.preX = this.x;
+        this.preY = this.y;
     }
 }
 function handleExploder() {
     for (let i = 0; i < exploders.length; i++) {
-        exploders[i].clear();
         exploders[i].update();
         exploders[i].draw();
     }
@@ -258,13 +417,13 @@ function runAutoExploder() {
     if (aiExploder) {
         let xMove = ((exploders[0].x - exploders[1].x) ** 3 / (canvas.width ** 2)) * exploders[1].speed;
         let yMove = ((exploders[0].y - exploders[1].y) ** 3 / (canvas.height ** 2)) * exploders[1].speed;
-        exploders[1].clear();
         exploders[1].x = Math.ceil(exploders[1].x + xMove);
         exploders[1].y = Math.ceil(exploders[1].y + yMove);
         exploders[1].update();
     }
 
 }
+
 
 
 // Resources after explosions
@@ -487,7 +646,7 @@ function handleWorldResources() {
 }
 
 
-class spriteAnimator {
+class oldspriteAnimator {
     constructor(spriteSheetName,
         cellWidth, cellHeight, padLeft, padTop, spriteWidth, spriteHeight, scale,
         speed, rowsColumnsSequence) {
@@ -619,7 +778,7 @@ function init() {
     myExploder1 = new Exploder(eType1, 100, 100);
     exploders.push(myExploder1);
     if (aiExploder) {
-        myExploder2 = new Exploder(eType2, 300, 300);
+        myExploder2 = new Exploder(eType2, 300, 300, sprBackWalk, sprLeftWalk, sprFrontWalk, sprRightWalk);
         exploders.push(myExploder2);
     }
 }
@@ -637,13 +796,7 @@ init();
 animate();
 
 
-const walkingImage = new Image();
-walkingImage.src = 'walking.png'; // Image: 21,45; Cell: 64, 60
-const walking = {
-    image: walkingImage,
-    spriteSize: { x: 21, y: 48 },
-    cellSize: { x: 64, y: 61 },
-}
+
 
 
 

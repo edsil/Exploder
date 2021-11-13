@@ -1,17 +1,24 @@
 'use strict';
-
 // Global Variables
+// Settings
 const aiExploder = false;
+const wrap = false;
+
+// Array storing items
+let natResources = []; // Resources placed in the world
+let resources = []; // Reserouces available after natural resource explodes
+let exploders = [];
+
+
 let myExploder1;
 let myExploder2;
 let sprBackWalk, sprFrontWalk, sprLeftWalk, sprRightWalk;
 let sprBackStop, sprFrontStop, sprLeftStop, sprRightStop;
-let positions = {
+let paramResource, paramExplosion, paramCoins;
+const positions = {
     UP_WALKING: 0, LEFT_WALKING: 1, DOWN_WALKING: 2, RIGHT_WALKING: 3,
     UP_STOPPED: 4, LEFT_STOPPED: 5, DOWN_STOPPED: 6, RIGHT_STOPPED: 7
 };
-
-
 
 // Sound Effects
 class soundFxs {
@@ -30,27 +37,19 @@ class soundFxs {
     }
 }
 
-let pickUpSnd = new soundFxs("./Sounds/coins01.mp3", 10);
-let endPickUpSnd = new soundFxs("./Sounds/coinsEnd.mp3", 5);
-let explosionSnd = new soundFxs("./Sounds/explosion.mp3", 5);
-
-// Array storing items
-let resouceTypes = []; // All possible resources
-let natResources = []; // Resources placed in the world
-let resources = []; // Reserouces available after natural resource explodes
-let inventory = []; // Resources owned by the exploder
-let natResTypes = [];
-let exploders = [];
+const pickUpSnd = new soundFxs("./Sounds/coins01.mp3", 10);
+const endPickUpSnd = new soundFxs("./Sounds/coinsEnd.mp3", 5);
+const explosionSnd = new soundFxs("./Sounds/explosion.mp3", 5);
 
 // Main Canvas
 const canvas = document.getElementById('canvas1');
 const ctx = canvas.getContext('2d');
-let canvasPosition = canvas.getBoundingClientRect();
+const canvasPosition = canvas.getBoundingClientRect();
 
 // Background
 const canvasBKG = document.getElementById('background');
 const ctxBKG = canvasBKG.getContext('2d');
-let canvasBackground = new Image();
+const canvasBackground = new Image();
 canvasBackground.src = "./Images/waterdrops.jpg";
 
 // Explosions Canvas
@@ -65,21 +64,13 @@ canvasBackground.onload = function () {
 // Menu Canvas
 const mCanvas = document.getElementById('menu');
 const menuCtx = mCanvas.getContext('2d');
-let menuCanvasPosition = mCanvas.getBoundingClientRect();
+const menuCanvasPosition = mCanvas.getBoundingClientRect();
 
 // World
 let cellSize = 30;
 let wCols = canvas.width / cellSize;
 let wRows = canvas.height / cellSize;
-let cellGap = 3;
 let frame = 0;
-const wrap = false;
-
-// Game status / info
-const controlsBar = {
-    width: mCanvas.width,
-    height: mCanvas.height,
-}
 
 // Mouse routines
 // From main canvas
@@ -170,6 +161,8 @@ function updateMenu() {
     menuCtx.fillText('Power: ' + exploders[0].power, 10, 20);
     menuCtx.fillText('Health: ' + exploders[0].health, 10, 70);
     menuCtx.fillText('Cash: ' + exploders[0].cash, 10, 120);
+    menuCtx.font = '12px Orbitron';
+    menuCtx.fillText('FPS: ' + Math.round(1000 * frame / performance.now()), 10, mCanvas.height - 20);
 }
 
 
@@ -193,7 +186,7 @@ class spriteAnimator {
         this.sprW = spriteWidth;
         this.sprH = spriteHeight;
         this.scale = scale;
-        this.aSlower = 100 - speed * 100;
+        this.speed = speed;
         this.sequence = rowsColumnsSequence;
         this.data = [];
         this.width = Math.floor(this.scale * this.sprW);
@@ -207,31 +200,35 @@ class spriteAnimator {
                 }
             } else if ('col' in this.sequence[i] && 'rows' in this.sequence[i]) {
                 let sx = this.sequence[i].col * this.cellW + this.padLeft;
-                for (let y = this.sequence[i].rows[0]; x <= this.sequence[i].rows[1]; y++) {
+                for (let y = this.sequence[i].rows[0]; y <= this.sequence[i].rows[1]; y++) {
                     let sy = y * this.cellH + this.padTop;
                     this.data.push([sx, sy]);
                 }
             } else
                 throw 'Wrong sequencing. Format must be [{row: 0, cols: [0, 7]}, {rows: [0, 3], col: 2}]';
         }
-        this.timer = 0;
+        this.floatCounter = 0;
         this.counter = 0;
         this.preX = -1;
         this.preY = -1;
+        this.lastFrame = false;
     }
 
     draw(x, y) {
-        this.timer += 1;
-        if (this.timer >= this.aSlower) {
-            this.timer = 0;
-            this.counter += 1;
-            if (this.counter >= this.data.length) {
-                this.counter = 0;
-            }
-        }
+        if (this.data.length == 0) return;
+        this.floatCounter += this.speed;
         ctx.drawImage(this.sprite,
             this.data[this.counter][0], this.data[this.counter][1],
             this.sprW, this.sprH, x, y, this.width, this.height);
+        this.counter = Math.round(this.floatCounter);
+        if (this.counter >= this.data.length) {
+            this.floatCounter = 0;
+            this.counter = 0;
+            this.lastFrame = true;
+        } else {
+            this.lastFrame = false;
+        }
+        return (this.lastFrame);
     }
 
     setSprite(n) {
@@ -242,7 +239,7 @@ class spriteAnimator {
 // Sprites
 function initSprites() {
     let size = 2;
-    let speed = 0.95;
+    let speed = 0.21;
     let padLeft = 6;
     let padTop = 13;
     let spriteWidth = 49;
@@ -268,22 +265,34 @@ function initSprites() {
     param[9] = [{ row: 11, cols: [1, 8] }];
     sprRightWalk = new spriteAnimator(...param);
 
-    param[8] = 0.9;
+    param[8] = 0.17;
     // Back Stopped
-    param[9] = [{ row: 0, cols: [0, 6] }];
+    param[9] = [{ row: 0, cols: [0, 0] }];
     sprBackStop = new spriteAnimator(...param);
 
     // Left Stopped
-    param[9] = [{ row: 1, cols: [0, 6] }];
+    param[9] = [{ row: 1, cols: [0, 0] }];
     sprLeftStop = new spriteAnimator(...param);
 
     // Front Stopped
-    param[9] = [{ row: 2, cols: [0, 6] }];;
+    param[9] = [{ row: 2, cols: [0, 0] }];;
     sprFrontStop = new spriteAnimator(...param);
 
     // Right Stopped
-    param[9] = [{ row: 3, cols: [0, 6] }];
+    param[9] = [{ row: 3, cols: [0, 0] }];
     sprRightStop = new spriteAnimator(...param);
+
+    // Explosion
+    paramExplosion = ['./Images/explosion.png',
+        100, 100, 0, 0,
+        100, 100,
+        size, 1, [{ row: 0, cols: [0, 8] }, { row: 1, cols: [0, 8] }, { row: 2, cols: [0, 8] },
+        { row: 3, cols: [0, 8] }, { row: 4, cols: [0, 8] }, { row: 5, cols: [0, 8] },
+        { row: 6, cols: [7, 8] }, { row: 8, cols: [0, 1] }]];
+
+    paramResource = ['./Images/plastic_box.png', 34, 38, 0, 0, 34, 38, 1, 1, [{ row: 0, cols: [0, 0] }]];
+
+    paramCoins = ['./Images/bling_coins.png', 21, 21, 0, 0, 16, 21, 1, 0.06, [{ row: 0, cols: [0, 3] }]];
 }
 
 
@@ -341,11 +350,11 @@ class Exploder {
         eType.spriteDownStopped, eType.spriteRightStopped];
         this.lastMove = positions.DOWN_STOPPED;
         this.currSprite = this.sprites[this.lastMove];
-        this.width = 0;
-        this.height = 0;
+        this.width = 10000;
+        this.height = 10000;
         for (let i = 0; i < this.sprites.length; i++) {
-            this.width = Math.max(this.width, this.sprites[i].width);
-            this.height = Math.max(this.height, this.sprites[i].height);
+            this.width = Math.min(this.width, this.sprites[i].width);
+            this.height = Math.min(this.height, this.sprites[i].height);
         }
     }
 
@@ -396,7 +405,7 @@ class Exploder {
     }
 
     draw() {
-        ctx.clearRect(this.preX, this.preY, this.width, this.height);
+        //ctx.clearRect(this.preX, this.preY, this.width, this.height);
         this.currSprite.draw(this.x, this.y);
         this.preX = this.x;
         this.preY = this.y;
@@ -430,6 +439,7 @@ function runAutoExploder() {
 // types
 const carbon = {
     images: ['black'],
+    paramResource: paramCoins,
     width: 0.3,
     height: 0.3,
     alivetime: 50000,
@@ -444,6 +454,7 @@ class ResourceExploded {
         this.x = x;
         this.y = y;
         this.quantity = quantity;
+        this.paramResource = type.paramResource;
         this.aliveTime = type.aliveTime;
         this.valueTotal = valueTotal;
         this.radius = Math.floor(radius * cellSize);
@@ -467,12 +478,13 @@ class ResourceExploded {
             if (y - this.height < 0 || y + this.height > canvas.height) {
                 y = this.y;
             }
-
+            let sprite = new spriteAnimator(...this.paramResource);
             let piece = {
                 x: x,
                 y: y,
                 width: this.width,
                 height: this.height,
+                sprite: sprite,
             }
             this.pieces.push(piece);
         }
@@ -486,28 +498,29 @@ class ResourceExploded {
             return;
         }
         for (let j = 0; j < exploders.length; j++) {
-            if (boxCollision(exploders[j], this.space)) {
-                for (let i = 0; i < this.pieces.length; i++) {
-                    if (boxCollision(exploders[j], this.pieces[i])) {
-                        if (this.pieces.length <= 1) {
-                            endPickUpSnd.play();
-                        } else {
-                            pickUpSnd.play();
-                        }
-                        let p = this.pieces[i];
-                        ctx.clearRect(p.x, p.y, p.width, p.height);
-                        exploders[j].cash += this.valueTotal / this.quantity;
-                        this.pieces.splice(i, 1);
-                        i--;
+            //if (boxCollision(exploders[j], this.space)) {
+            for (let i = 0; i < this.pieces.length; i++) {
+                if (boxCollision(exploders[j], this.pieces[i])) {
+                    if (this.pieces.length <= 1) {
+                        endPickUpSnd.play();
+                    } else {
+                        pickUpSnd.play();
                     }
+                    //let p = this.pieces[i];
+                    //ctx.clearRect(p.x, p.y, p.width, p.height);
+                    exploders[j].cash += this.valueTotal / this.quantity;
+                    this.pieces.splice(i, 1);
+                    i--;
                 }
             }
+            //}
         }
     }
     draw() {
         for (let i = 0; i < this.pieces.length; i++) {
-            ctx.fillStyle = this.currImage;
-            ctx.fillRect(this.pieces[i].x, this.pieces[i].y, this.width, this.height);
+            //ctx.fillStyle = this.currImage;
+            //ctx.fillRect(this.pieces[i].x, this.pieces[i].y, this.width, this.height);
+            this.pieces[i].sprite.draw(this.pieces[i].x, this.pieces[i].y);
         }
     }
 }
@@ -516,8 +529,8 @@ function handleResourcesExploded() {
         resources[i].update();
         resources[i].draw();
         if (resources[i].expired) {
-            ctx.clearRect(resources[i].x, resources[i].y,
-                resources[i].radius, resources[i].radius);
+            //ctx.clearRect(resources[i].x, resources[i].y,
+            //    resources[i].radius, resources[i].radius);
             resources.splice(i, 1);
             i++;
         }
@@ -530,15 +543,20 @@ function handleResourcesExploded() {
 // types
 let maxResources = 4;
 let resourcesSlower = 150;
-const blackRock = {
+const plasticBox = {
     images: ['black', 'orange', 'red'], cost: 10, value: 12,
     minPower: 50, detonTime: 200, explodingRadius: 150, explodingTime: 150,
+    paramExplosion: paramExplosion,
+    paramResource: paramResource,
     aliveTime: 6000, damage: 15, framesPerDamage: 30, width: 1, height: 1,
 };
 
 class NatResource {
     constructor(type, x, y) {
         this.images = type.images;
+        this.sprExplosion = new spriteAnimator(...type.paramExplosion);
+        this.sprResource = new spriteAnimator(...type.paramResource);
+        this.endExplosion = false;
         this.currImage = this.images[0];
         this.cost = type.cost;
         this.value = type.value;
@@ -569,12 +587,15 @@ class NatResource {
                 this.activated = false;
                 this.currImage = this.images[2];
                 this.exploding = true;
+                //ctxEXP.clearRect(this.x - this.sprExplosion.width / 2, this.y - this.sprExplosion.height / 2, this.sprExplosion.width, this.sprExplosion.height);
+                //ctx.clearRect(this.x + cellGap, this.y + cellGap,
+                //    this.width - cellGap, this.height - cellGap);
                 explosionSnd.play();
             } else {
                 this.currImage = this.images[1];
             }
         } else if (this.exploding) {
-            if (this.timer > --this.explodingTime) {
+            if (this.endExplosion) {
                 this.exploded = true;
                 let r = new ResourceExploded(carbon, this.x + this.width / 2, this.y + this.height / 2,
                     this.value / 2, this.value, this.width / cellSize * 1.5);
@@ -602,27 +623,36 @@ class NatResource {
     }
     draw() {
         if (this.expired || this.exploded) {
-            ctx.clearRect(this.x + cellGap, this.y + cellGap,
-                this.width - cellGap, this.height - cellGap);
+            //ctx.clearRect(this.x - this.sprExplosion.width / 2, this.y - this.sprExplosion.height / 2, this.sprExplosion.width, this.sprExplosion.height);
+            //ctxEXP.clearRect(this.x - this.sprExplosion.width / 2, this.y - this.sprExplosion.height / 2, this.sprExplosion.width, this.sprExplosion.height);
             return;
         } else {
-            if (this.activated || this.exploding) {
+            if (this.exploding) {
+                //ctx.clearRect(this.x - this.sprExplosion.width / 2, this.y - this.sprExplosion.height / 2, this.sprExplosion.width, this.sprExplosion.height);
+                if (this.sprExplosion.draw(this.x - this.sprExplosion.width / 2, this.y - this.sprExplosion.height / 2)) {
+                    this.endExplosion = true;
+                    //ctx.clearRect(this.x - this.sprExplosion.width / 2, this.y - this.sprExplosion.height / 2, this.sprExplosion.width, this.sprExplosion.height);
+                }
+            } else if (this.activated) {
                 let opacity = 1 - 2 * (this.detonTime - this.timer) / (this.initDetonTime);
-                if (this.exploding) opacity = 1;
                 ctxEXP.fillStyle = "rgba(255, 162, 162, " + opacity + ")";
                 ctxEXP.beginPath();
                 ctxEXP.arc(this.x + this.width / 2, this.y + this.height / 2, this.radius, 0, Math.PI * 2);
                 ctxEXP.fill();
+                ctx.fillStyle = this.currImage;
+                ctx.fillRect(this.x, this.y,
+                    this.width, this.height);
             }
-            ctx.fillStyle = this.currImage;
-            ctx.fillRect(this.x + cellGap, this.y + cellGap,
-                this.width - cellGap, this.height - cellGap);
+            else {
+                this.sprResource.draw(this.x, this.y);
+            }
         }
     }
 }
 
+
 function handleWorldResources() {
-    ctxEXP.clearRect(0, 0, expCanvas.width, expCanvas.height);
+    //ctxEXP.clearRect(0, 0, expCanvas.width, expCanvas.height);
     for (let i = 0; i < natResources.length; i++) {
         natResources[i].update();
         natResources[i].draw();
@@ -640,69 +670,13 @@ function handleWorldResources() {
     if (natResources.length < maxResources && frame % resourcesSlower == 0) {
         let x = Math.floor(50 + Math.random() * (canvas.width - 100));
         let y = Math.floor(50 + Math.random() * (canvas.height - 100));
-        let res1 = new NatResource(blackRock, x, y);
+        let res1 = new NatResource(plasticBox, x, y);
         natResources.push(res1);
     }
 }
 
 
-class oldspriteAnimator {
-    constructor(spriteSheetName,
-        cellWidth, cellHeight, padLeft, padTop, spriteWidth, spriteHeight, scale,
-        speed, rowsColumnsSequence) {
-        // speed - from 0(slowest) to 1(fastest)
-        // scale - how much to increase (>1) or decrease (<1) the sprite
-        // rowsColumnsSequence is an array with arrays => [[0,0], [0,1], [0,2]...]
-        this.sprite = new Image();
-        this.sprite.src = spriteSheetName;
-        this.cellW = cellWidth;
-        this.cellH = cellHeight;
-        this.padLeft = padLeft;
-        this.padTop = padTop;
-        this.sprW = spriteWidth;
-        this.sprH = spriteHeight;
-        this.scale = scale;
-        this.aSlower = 100 - speed * 100;
-        this.sequence = rowsColumnsSequence;
-        this.data = [];
-        for (let i = 0; i < this.sequence.length; i++) {
-            let sx = this.sequence[i][0] * this.cellH + this.padLeft;
-            let sy = this.sequence[i][1] * this.cellH + this.padTop;
-            let dWidth = Math.floor(this.scale * this.sprW);
-            let dHeight = Math.floor(this.scale * this.sprH);
-            this.data.push([sx, sy, this.sprW, this.sprH, dWidth, dHeight]);
-        }
-        this.timer = 0;
-        this.counter = 0;
-        this.preX = -1;
-        this.preY = -1;
-    }
 
-    draw(x, y) {
-        this.timer += 1;
-        if (this.timer >= this.aSlower) {
-            this.timer = 0;
-            if (this.counter >= this.data.length) {
-                this.counter = 0;
-            }
-            if (this.preX > 0) {
-                ctx.clearRect(this.preX, this.preY, this.sprW, this.sprH);
-            }
-            this.preX = x;
-            this.preY = y;
-            ctx.drawImage(this.sprite,
-                this.data[counter][0], this.data[counter][1],
-                this.data[counter][2], this.data[counter][3],
-                x, y,
-                this.data[counter][4], this.data[counter][5]);
-            this.counter += 1;
-        }
-    }
-
-    setSprite(n) {
-        this.counter = n;
-    }
-}
 
 function boxCollision(first, second) {
     if (!(first.x > second.x + second.width ||
@@ -769,11 +743,8 @@ function boxCircleCollision(rect, circle) {
 function init() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctxEXP.clearRect(0, 0, expCanvas.width, expCanvas.height);
-    resouceTypes = []; // All possible resources
     natResources = []; // Resources placed in the world
     resources = []; // Reserouces available after natural resource explodes
-    inventory = []; // Resources owned by the exploder
-    natResTypes = [];
     exploders = [];
     myExploder1 = new Exploder(eType1, 100, 100);
     exploders.push(myExploder1);
@@ -785,6 +756,8 @@ function init() {
 
 function animate() {
     frame += 1;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctxEXP.clearRect(0, 0, expCanvas.width, expCanvas.height);
     runAutoExploder();
     handleExploder();
     handleWorldResources();

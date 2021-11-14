@@ -8,17 +8,32 @@ const wrap = false;
 let natResources = []; // Resources placed in the world
 let resources = []; // Reserouces available after natural resource explodes
 let exploders = [];
+let spriteFramesPerSecond = {};
 
 
 let myExploder1;
 let myExploder2;
 let sprBackWalk, sprFrontWalk, sprLeftWalk, sprRightWalk;
 let sprBackStop, sprFrontStop, sprLeftStop, sprRightStop;
-let paramResource, paramExplosion, paramCoins;
+let paramResource, paramResActivated, paramExplosion, paramCoins;
 const positions = {
     UP_WALKING: 0, LEFT_WALKING: 1, DOWN_WALKING: 2, RIGHT_WALKING: 3,
     UP_STOPPED: 4, LEFT_STOPPED: 5, DOWN_STOPPED: 6, RIGHT_STOPPED: 7
 };
+
+// Images
+function newImage(src) {
+    var tmp = new Image();
+    tmp.src = src;
+    return tmp
+}
+const imgExplosion = newImage('./Images/explosion.png');
+const imgPlasticBoxGrey = newImage('./Images/plastic_box.png');
+const imgPlasticBoxRed = newImage('./Images/plastic_box_red_shaking2.png');
+const imgCoins = newImage('./Images/bling_coins.png');
+const imgExploder1 = newImage('./Images/spritesheet_edu.png');
+const imgExploder2 = newImage('./Images/spritesheet_jonathan.png');
+const canvasBackground = newImage("./Images/waterdrops.jpg");
 
 // Sound Effects
 class soundFxs {
@@ -49,8 +64,7 @@ const canvasPosition = canvas.getBoundingClientRect();
 // Background
 const canvasBKG = document.getElementById('background');
 const ctxBKG = canvasBKG.getContext('2d');
-const canvasBackground = new Image();
-canvasBackground.src = "./Images/waterdrops.jpg";
+
 
 // Explosions Canvas
 const expCanvas = document.getElementById('explosions');
@@ -162,6 +176,12 @@ function updateMenu() {
     menuCtx.fillText('Health: ' + exploders[0].health, 10, 70);
     menuCtx.fillText('Cash: ' + exploders[0].cash, 10, 120);
     menuCtx.font = '12px Orbitron';
+    let printRow = 200;
+    let timersKeys = Object.keys(spriteFramesPerSecond);
+    for (let i = 0; i < timersKeys.length; i++) {
+        menuCtx.fillText(timersKeys[i] + ": " + spriteFramesPerSecond[timersKeys[i]], 10, printRow);
+        printRow += 20;
+    }
     menuCtx.fillText('FPS: ' + Math.round(1000 * frame / performance.now()), 10, mCanvas.height - 20);
 }
 
@@ -169,7 +189,7 @@ function updateMenu() {
 // Exploder
 // Sprite animation controller
 class spriteAnimator {
-    constructor(spriteSheetName,
+    constructor(spriteImage,
         cellWidth, cellHeight,
         padLeft, padTop,
         spriteWidth, spriteHeight,
@@ -177,8 +197,7 @@ class spriteAnimator {
         // scale - how much to increase (>1) or decrease (<1) the sprite
         // speed - from 0(slowest) to 1(fastest)
         // rowsColumnsSequence is an array with arrays => [[0,0], [0,1], [0,2]...]
-        this.sprite = new Image();
-        this.sprite.src = spriteSheetName;
+        this.sprite = spriteImage;
         this.cellW = cellWidth;
         this.cellH = cellHeight;
         this.padLeft = padLeft;
@@ -212,16 +231,25 @@ class spriteAnimator {
         this.preX = -1;
         this.preY = -1;
         this.lastFrame = false;
+        this.timePerSpriteCycle = { startTime: 0, endTime: 0, frames: 0 };
     }
 
     draw(x, y) {
         if (this.data.length == 0) return;
+        if (this.floatCounter == 0) {
+            this.timePerSpriteCycle.startTime = performance.now();
+        }
         this.floatCounter += this.speed;
         ctx.drawImage(this.sprite,
             this.data[this.counter][0], this.data[this.counter][1],
             this.sprW, this.sprH, x, y, this.width, this.height);
         this.counter = Math.round(this.floatCounter);
         if (this.counter >= this.data.length) {
+            this.timePerSpriteCycle.endTime = performance.now();
+            this.timePerSpriteCycle.frames = this.counter;
+            spriteFramesPerSecond[this.sprite.src.substring(this.sprite.src.length - 15)] =
+                Math.round(this.timePerSpriteCycle.frames /
+                    (this.timePerSpriteCycle.endTime - this.timePerSpriteCycle.startTime) * 1000);
             this.floatCounter = 0;
             this.counter = 0;
             this.lastFrame = true;
@@ -244,7 +272,7 @@ function initSprites() {
     let padTop = 13;
     let spriteWidth = 49;
     let spriteHeight = 51;
-    let param = ['./Images/eduCreation.png',
+    let param = [imgExploder2,
         64, 64, padLeft, padTop,
         spriteWidth, spriteHeight,
         size, speed, []];
@@ -283,20 +311,25 @@ function initSprites() {
     sprRightStop = new spriteAnimator(...param);
 
     // Explosion
-    paramExplosion = ['./Images/explosion.png',
+    paramExplosion = [imgExplosion,
         100, 100, 0, 0,
         100, 100,
         size, 1, [{ row: 0, cols: [0, 8] }, { row: 1, cols: [0, 8] }, { row: 2, cols: [0, 8] },
         { row: 3, cols: [0, 8] }, { row: 4, cols: [0, 8] }, { row: 5, cols: [0, 8] },
         { row: 6, cols: [7, 8] }, { row: 8, cols: [0, 1] }]];
 
-    paramResource = ['./Images/plastic_box.png', 34, 38, 0, 0, 34, 38, 1, 1, [{ row: 0, cols: [0, 0] }]];
+    paramResource = [imgPlasticBoxGrey, 42, 42, 0, 0, 42, 42, 1, 1, [{ row: 0, cols: [0, 0] }]];
 
-    paramCoins = ['./Images/bling_coins.png', 21, 21, 0, 0, 16, 21, 1, 0.06, [{ row: 0, cols: [0, 3] }]];
+    paramResActivated = [imgPlasticBoxRed, 42, 42, 0, 0, 42, 42, 1, 0.3,
+        [{ row: 0, cols: [0, 8] }, { row: 1, cols: [0, 8] },
+        { row: 2, cols: [0, 8] }, { row: 3, cols: [0, 8] }, { row: 4, cols: [0, 8] }]];
+
+    paramCoins = [imgCoins, 21, 21, 0, 0, 16, 21, 1, 0.06, [{ row: 0, cols: [0, 3] }]];
 }
 
 
 initSprites();
+
 const eType1 = {
     image: 'blue', // to be replace with an image later, for now it will be a square
     power: 100, // Initial exploder power
@@ -434,7 +467,6 @@ function runAutoExploder() {
 }
 
 
-
 // Resources after explosions
 // types
 const carbon = {
@@ -442,7 +474,7 @@ const carbon = {
     paramResource: paramCoins,
     width: 0.3,
     height: 0.3,
-    alivetime: 50000,
+    alivetime: 3600,
 };
 
 class ResourceExploded {
@@ -545,8 +577,9 @@ let maxResources = 4;
 let resourcesSlower = 150;
 const plasticBox = {
     images: ['black', 'orange', 'red'], cost: 10, value: 12,
-    minPower: 50, detonTime: 200, explodingRadius: 150, explodingTime: 150,
+    minPower: 50, detonTime: 300, explodingRadius: 150, explodingTime: 150,
     paramExplosion: paramExplosion,
+    paramResActivated: paramResActivated,
     paramResource: paramResource,
     aliveTime: 6000, damage: 15, framesPerDamage: 30, width: 1, height: 1,
 };
@@ -555,6 +588,7 @@ class NatResource {
     constructor(type, x, y) {
         this.images = type.images;
         this.sprExplosion = new spriteAnimator(...type.paramExplosion);
+        this.sprActivated = new spriteAnimator(...type.paramResActivated);
         this.sprResource = new spriteAnimator(...type.paramResource);
         this.endExplosion = false;
         this.currImage = this.images[0];
@@ -635,13 +669,18 @@ class NatResource {
                 }
             } else if (this.activated) {
                 let opacity = 1 - 2 * (this.detonTime - this.timer) / (this.initDetonTime);
-                ctxEXP.fillStyle = "rgba(255, 162, 162, " + opacity + ")";
+                var gradient = ctxEXP.createRadialGradient(this.x + this.width / 2, this.y + this.height / 2, 0,
+                    this.x + this.width / 2, this.y + this.height / 2, this.radius * 1.33);
+
+                // Add three color stops
+                gradient.addColorStop(0, "rgba(255, 100, 70, 0.1)");
+                gradient.addColorStop(.25, "rgba(200, 75, 45, 0.6)");
+                gradient.addColorStop(1, "rgba(150, 50, 30, 0.0031)");
+                ctxEXP.fillStyle = gradient;
                 ctxEXP.beginPath();
-                ctxEXP.arc(this.x + this.width / 2, this.y + this.height / 2, this.radius, 0, Math.PI * 2);
+                ctxEXP.arc(this.x + this.width / 2, this.y + this.height / 2, this.radius * 1.4, 0, Math.PI * 2);
                 ctxEXP.fill();
-                ctx.fillStyle = this.currImage;
-                ctx.fillRect(this.x, this.y,
-                    this.width, this.height);
+                this.sprActivated.draw(this.x, this.y);
             }
             else {
                 this.sprResource.draw(this.x, this.y);

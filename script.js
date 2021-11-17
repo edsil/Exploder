@@ -33,20 +33,21 @@ let paramResource, paramResActivated, paramExplosion, paramCoins;
 const pickUpSnd = new soundFxs("./Sounds/coins01.mp3", 10);
 const endPickUpSnd = new soundFxs("./Sounds/coinsEnd.mp3", 5);
 const explosionSnd = new soundFxs("./Sounds/explosion.mp3", 5);
+const hurt = new soundFxs("./Sounds/hurt.mp3", 10);
 
 // Images
 function newImage(src) {
     var tmp = new Image();
     tmp.src = src;
     return tmp
-}
+};
 const imgExplosion = newImage('./Images/explosion.png');
 const imgPlasticBoxGrey = newImage('./Images/plastic_box.png');
 const imgPlasticBoxRed = newImage('./Images/plastic_box_red_shaking2.png');
 const imgCoins = newImage('./Images/bling_coins.png');
 const imgExploder1 = newImage('./Images/spritesheet_edu.png');
 const imgExploder2 = newImage('./Images/spritesheet_jonathan.png');
-const canvasBackground = newImage("./Images/waterdrops.jpg");
+const canvasBackground = newImage("./Images/greenbackground.png");
 
 // Canvasses
 // Main Canvas
@@ -70,8 +71,7 @@ const ctxEXP = expCanvas.getContext('2d');
 // Makes sure the image is loaded first otherwise nothing will draw.
 canvasBackground.onload = function () {
     ctxBKG.drawImage(canvasBackground, 0, 0, canvasBKG.width, canvasBKG.height);
-}
-
+};
 
 // Mouse routines
 // From main canvas
@@ -80,14 +80,14 @@ const mouse = {
     y: undefined,
     width: 1,
     height: 1,
-}
+};
 // From Menu Canvas
 const menuMouse = {
     x: undefined,
     y: undefined,
     width: 1,
     height: 1,
-}
+};
 // Mouse listeners
 canvas.addEventListener('mousemove', function (e) {
     mouse.x = e.x - canvasPosition.left;
@@ -100,11 +100,11 @@ mCanvas.addEventListener('mousemove', function (e) {
 canvas.addEventListener('mouseleave', function () {
     mouse.x = undefined;
     mouse.y = undefined;
-})
+});
 mCanvas.addEventListener('mouseleave', function () {
     menuMouse.x = undefined;
     menuMouse.y = undefined;
-})
+});
 
 // Keyboard routines
 let controlers = [];
@@ -115,7 +115,8 @@ const ctrl0 = {
     right: false,
     btn1: false,
     btn2: false,
-}
+};
+
 controlers.push(ctrl0);
 const ctrl1 = {
     up: false,
@@ -124,7 +125,8 @@ const ctrl1 = {
     right: false,
     btn1: false,
     btn2: false,
-}
+};
+
 controlers.push(ctrl1);
 document.addEventListener('keydown', function (e) {
     switch (e.code) {
@@ -174,8 +176,7 @@ function updateMenu() {
         printRow += 20;
     }
     menuCtx.fillText('FPS: ' + Math.round(1000 * frame / performance.now()), 10, mCanvas.height - 20);
-}
-
+};
 
 // Initialise Sprites
 function initSprites() {
@@ -238,15 +239,14 @@ function initSprites() {
         { row: 2, cols: [0, 8] }, { row: 3, cols: [0, 8] }, { row: 4, cols: [0, 8] }]];
 
     paramCoins = [imgCoins, 21, 21, 0, 0, 16, 21, 1, 0.06, [{ row: 0, cols: [0, 3] }]];
-}
+};
 
 initSprites();
-
 
 // Exploders
 const eType1 = {
     power: 100, // Initial exploder power
-    health: 100, //Initial exploere health
+    health: 1000, //Initial exploere health
     cash: 100, // Initial exploder cash
     spriteUpWalking: sprBackWalk,
     spriteLeftWalking: sprLeftWalk,
@@ -260,7 +260,7 @@ const eType1 = {
     width: 1,
     speed: 3,
     control: 1,
-}
+};
 
 const eType2 = {
     power: 100, // Initial exploder power
@@ -276,8 +276,7 @@ const eType2 = {
     spriteRightStopped: sprRightStop,
     speed: 1,
     control: 0,
-}
-
+};
 
 function handleExploder() {
     for (let i = 0; i < exploders.length; i++) {
@@ -287,8 +286,7 @@ function handleExploder() {
     if (exploders[0].health <= 0) {
         init();
     }
-}
-
+};
 
 function runAutoExploder() {
     if (aiExploder) {
@@ -298,8 +296,7 @@ function runAutoExploder() {
         exploders[1].y = Math.ceil(exploders[1].y + yMove);
         exploders[1].update();
     }
-}
-
+};
 
 // Resources after explosions
 // types
@@ -319,8 +316,7 @@ function handleResourcesExploded() {
             i++;
         }
     }
-}
-
+};
 
 // Natural Resources
 // types
@@ -332,7 +328,7 @@ const plasticBox = {
     paramExplosion: paramExplosion,
     paramResActivated: paramResActivated,
     paramResource: paramResource,
-    aliveTime: 6000, damage: 15, framesPerDamage: 30, width: 1, height: 1,
+    aliveTime: 6000, damage: 15, framesPerDamage: 20, width: 1, height: 1,
 };
 
 function handleWorldResources() {
@@ -360,9 +356,7 @@ function handleWorldResources() {
         let res1 = new NatResource(plasticBox, x, y);
         natResources.push(res1);
     }
-}
-
-
+};
 
 // Collision detectors
 function boxCollision(first, second) {
@@ -373,12 +367,13 @@ function boxCollision(first, second) {
     ) {
         return true;
     }
-}
+};
 
 function boxCircleCollision(rect, circle) {
     // Rect must contain .x, .y, .width, .height
     // Circle must contain .x, .y, .radius
-    if (!(rect.x && rect.y && rect.width && rect.height && circle.x && circle.y && circle.radius)) {
+    if (!('x' in rect && 'y' in rect && 'width' in rect && 'height' in rect &&
+        'x' in circle && 'y' in circle && 'radius' in circle)) {
         throw 'rect must contain .x, .y, .width, .height and circle must contain .x, .y, .radius!';
     }
     let is_in = false;
@@ -417,8 +412,7 @@ function boxCircleCollision(rect, circle) {
             x1 < yIntersect && yIntersect < x2);
     }
     return is_in;
-}
-
+};
 
 function init() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -432,7 +426,7 @@ function init() {
         myExploder2 = new Exploder(eType2, 300, 300, sprBackWalk, sprLeftWalk, sprFrontWalk, sprRightWalk);
         exploders.push(myExploder2);
     }
-}
+};
 
 function animate() {
     frame += 1;
@@ -444,13 +438,6 @@ function animate() {
     handleResourcesExploded();
     updateMenu();
     requestAnimationFrame(animate);
-}
+};
 init();
 animate();
-
-
-
-
-
-
-

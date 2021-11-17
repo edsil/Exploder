@@ -75,6 +75,12 @@ class Exploder {
         }
     }
 
+    hurtHealth(value) {
+        this.health -= value;
+        hurt.play();
+
+    }
+
     inDanger() {
         this.currentInDanger = true;
         this.dangerFrame = frame;

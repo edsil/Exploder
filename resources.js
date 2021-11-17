@@ -43,7 +43,6 @@ class NatResource {
                         exploders[i].inDanger();
                     }
                 }
-
             }
         } else if (this.exploding) {
             if (this.endExplosion) {
@@ -53,10 +52,13 @@ class NatResource {
                 resources.push(r);
                 this.exploding = false;
                 this.timer = 0;
-            } else if (this.timer % this.framesPerDamage == 0) {
+            } else {
                 for (let i = 0; i < exploders.length; i++) {
                     if (boxCircleCollision(exploders[i], this)) {
-                        exploders[i].health -= this.damage;
+                        exploders[i].inDanger();
+                        if (this.timer % this.framesPerDamage == 0) {
+                            exploders[i].hurtHealth(this.damage);
+                        }
                     }
                 }
             }
@@ -94,11 +96,11 @@ class NatResource {
                     this.endExplosion = true;
                 }
             } else if (this.activated) {
+                /*
                 let opacity = 1 - 2 * (this.detonTime - this.timer) / (this.initDetonTime);
                 var gradient = ctxEXP.createRadialGradient(this.x + this.width / 2, this.y + this.height / 2, 0,
                     this.x + this.width / 2, this.y + this.height / 2, this.radius * 1.33);
                 // Add three color stops
-                /*
                 gradient.addColorStop(0, "rgba(255, 100, 70, 0.1)");
                 gradient.addColorStop(.25, "rgba(200, 75, 45, 0.6)");
                 gradient.addColorStop(1, "rgba(150, 50, 30, 0.0031)");

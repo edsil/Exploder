@@ -86,10 +86,10 @@ class Exploder {
         this.dangerFrame = frame;
     }
 
-    draw() {
-        this.currSprite.draw(this.x, this.y);
+    draw(ctx2D) {
+        this.currSprite.draw(this.x, this.y, ctx2D);
         if (this.currentInDanger) {
-            this.currSprite.reColor(this.x, this.y, "rgb(255,0,0)");
+            this.currSprite.reColor(this.x, this.y, "rgb(255,0,0)", ctx2D);
         }
     }
 }

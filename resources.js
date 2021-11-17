@@ -87,33 +87,19 @@ class NatResource {
         this.popUpCounter = 0;
     }
 
-    draw() {
+    draw(ctx2D) {
         if (this.expired || this.exploded) {
             return;
         } else {
             if (this.exploding) {
-                if (this.sprExplosion.draw(this.x - this.sprExplosion.width / 2, this.y - this.sprExplosion.height / 2)) {
+                if (this.sprExplosion.draw(this.x - this.sprExplosion.width / 2, this.y - this.sprExplosion.height / 2, ctx2D)) {
                     this.endExplosion = true;
                 }
             } else if (this.activated) {
-                /*
-                let opacity = 1 - 2 * (this.detonTime - this.timer) / (this.initDetonTime);
-                var gradient = ctxEXP.createRadialGradient(this.x + this.width / 2, this.y + this.height / 2, 0,
-                    this.x + this.width / 2, this.y + this.height / 2, this.radius * 1.33);
-                // Add three color stops
-                gradient.addColorStop(0, "rgba(255, 100, 70, 0.1)");
-                gradient.addColorStop(.25, "rgba(200, 75, 45, 0.6)");
-                gradient.addColorStop(1, "rgba(150, 50, 30, 0.0031)");
-                ctxEXP.fillStyle = gradient;
-                ctxEXP.beginPath();
-                ctxEXP.arc(this.x + this.width / 2, this.y + this.height / 2, this.radius * 1.4, 0, Math.PI * 2);
-                ctxEXP.fill();
-                */
-                this.sprActivated.draw(this.x, this.y);
-
+                this.sprActivated.draw(this.x, this.y, ctx2D);
             }
             else {
-                this.sprResource.draw(this.x, this.y);
+                this.sprResource.draw(this.x, this.y, ctx2D);
             }
         }
     }
@@ -185,9 +171,9 @@ class ResourceExploded {
             }
         }
     }
-    draw() {
+    draw(ctx2D) {
         for (let i = 0; i < this.pieces.length; i++) {
-            this.pieces[i].sprite.draw(this.pieces[i].x, this.pieces[i].y);
+            this.pieces[i].sprite.draw(this.pieces[i].x, this.pieces[i].y, ctx2D);
         }
     }
 }

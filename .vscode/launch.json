@@ -8,7 +8,7 @@
             "type": "chrome",
             "request": "launch",
             "name": "Launch Chrome from the file system",
-            "file": "${workspaceFolder}"
+            "file": "${workspaceFolder}/index.html"
         },
     ]
 }

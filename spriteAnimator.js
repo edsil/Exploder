@@ -45,7 +45,7 @@ class spriteAnimator {
         this.timePerSpriteCycle = { startTime: 0, endTime: 0, frames: 0 };
     }
 
-    draw(x, y) {
+    draw(x, y, ctxMain) {
         this.width = Math.floor(this.scale * this.sprW);
         this.height = Math.floor(this.scale * this.sprH);
         if (this.data.length == 0) return;
@@ -53,7 +53,7 @@ class spriteAnimator {
             this.timePerSpriteCycle.startTime = performance.now();
         }
         this.floatCounter += this.speed;
-        ctx.drawImage(this.sprite,
+        ctxMain.drawImage(this.sprite,
             this.data[this.counter][0], this.data[this.counter][1],
             this.sprW, this.sprH, x, y, this.width, this.height);
         this.counter = Math.round(this.floatCounter);
@@ -72,15 +72,15 @@ class spriteAnimator {
         return (this.lastFrame);
     }
 
-    reColor(x, y, color) {
-        ctx.globalCompositeOperation = "color";
-        ctx.fillStyle = color;
-        ctx.fillRect(x, y, this.width, this.height);
-        ctx.globalCompositeOperation = "destination-in";
-        ctx.drawImage(this.sprite,
+    reColor(x, y, color, ctxMain) {
+        ctxMain.globalCompositeOperation = "color";
+        ctxMain.fillStyle = color;
+        ctxMain.fillRect(x, y, this.width, this.height);
+        ctxMain.globalCompositeOperation = "destination-in";
+        ctxMain.drawImage(this.sprite,
             this.data[this.counter][0], this.data[this.counter][1],
             this.sprW, this.sprH, x, y, this.width, this.height);
-        ctx.globalCompositeOperation = "source-over";
+        ctxMain.globalCompositeOperation = "source-over";
 
     }
 

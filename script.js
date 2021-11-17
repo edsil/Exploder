@@ -64,10 +64,6 @@ const menuCanvasPosition = mCanvas.getBoundingClientRect();
 const canvasBKG = document.getElementById('background');
 const ctxBKG = canvasBKG.getContext('2d');
 
-// Explosions Canvas
-const expCanvas = document.getElementById('explosions');
-const ctxEXP = expCanvas.getContext('2d');
-
 // Makes sure the image is loaded first otherwise nothing will draw.
 canvasBackground.onload = function () {
     ctxBKG.drawImage(canvasBackground, 0, 0, canvasBKG.width, canvasBKG.height);
@@ -161,21 +157,21 @@ document.addEventListener('keyup', function (e) {
 });
 
 // Menu
-function updateMenu() {
-    menuCtx.clearRect(0, 0, mCanvas.width, mCanvas.height);
-    menuCtx.fillStyle = 'gold';
-    menuCtx.font = '20px Orbitron';
-    menuCtx.fillText('Power: ' + exploders[0].power, 10, 20);
-    menuCtx.fillText('Health: ' + exploders[0].health, 10, 70);
-    menuCtx.fillText('Cash: ' + exploders[0].cash, 10, 120);
-    menuCtx.font = '12px Orbitron';
+function updateMenu(ctx2D) {
+    ctx2D.clearRect(0, 0, mCanvas.width, mCanvas.height);
+    ctx2D.fillStyle = 'gold';
+    ctx2D.font = '20px Orbitron';
+    ctx2D.fillText('Power: ' + exploders[0].power, 10, 20);
+    ctx2D.fillText('Health: ' + exploders[0].health, 10, 70);
+    ctx2D.fillText('Cash: ' + exploders[0].cash, 10, 120);
+    ctx2D.font = '12px Orbitron';
     let printRow = 200;
     let timersKeys = Object.keys(spriteFramesPerSecond);
     for (let i = 0; i < timersKeys.length; i++) {
-        menuCtx.fillText(timersKeys[i] + ": " + spriteFramesPerSecond[timersKeys[i]], 10, printRow);
+        ctx2D.fillText(timersKeys[i] + ": " + spriteFramesPerSecond[timersKeys[i]], 10, printRow);
         printRow += 20;
     }
-    menuCtx.fillText('FPS: ' + Math.round(1000 * frame / performance.now()), 10, mCanvas.height - 20);
+    ctx2D.fillText('FPS: ' + Math.round(1000 * frame / performance.now()), 10, mCanvas.height - 20);
 };
 
 // Initialise Sprites
@@ -258,7 +254,7 @@ const eType1 = {
     spriteRightStopped: sprRightStop,
     height: 2,
     width: 1,
-    speed: 3,
+    speed: 13,
     control: 1,
 };
 
@@ -281,7 +277,7 @@ const eType2 = {
 function handleExploder() {
     for (let i = 0; i < exploders.length; i++) {
         exploders[i].update();
-        exploders[i].draw();
+        exploders[i].draw(ctx);
     }
     if (exploders[0].health <= 0) {
         init();
@@ -310,7 +306,7 @@ const carbon = {
 function handleResourcesExploded() {
     for (let i = 0; i < resources.length; i++) {
         resources[i].update();
-        resources[i].draw();
+        resources[i].draw(ctx);
         if (resources[i].expired) {
             resources.splice(i, 1);
             i++;
@@ -334,7 +330,7 @@ const plasticBox = {
 function handleWorldResources() {
     for (let i = 0; i < natResources.length; i++) {
         natResources[i].update();
-        natResources[i].draw();
+        natResources[i].draw(ctx);
         if (natResources[i].expired || natResources[i].exploded) {
             natResources.splice(i, 1);
             i--;
@@ -416,7 +412,6 @@ function boxCircleCollision(rect, circle) {
 
 function init() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctxEXP.clearRect(0, 0, expCanvas.width, expCanvas.height);
     natResources = []; // Resources placed in the world
     resources = []; // Reserouces available after natural resource explodes
     exploders = [];
@@ -431,12 +426,11 @@ function init() {
 function animate() {
     frame += 1;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctxEXP.clearRect(0, 0, expCanvas.width, expCanvas.height);
     runAutoExploder();
     handleExploder();
     handleWorldResources();
     handleResourcesExploded();
-    updateMenu();
+    updateMenu(menuCtx);
     requestAnimationFrame(animate);
 };
 init();

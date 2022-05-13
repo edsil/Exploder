@@ -1,6 +1,6 @@
 // Natural Resources
 class NatResource {
-    constructor(type, x, y) {
+    constructor(type, difficulty, x, y) {
         this.sprExplosion = new spriteAnimator(...type.paramExplosion);
         this.sprActivated = new spriteAnimator(...type.paramResActivated);
         this.sprResource = new spriteAnimator(...type.paramResource);
@@ -9,9 +9,9 @@ class NatResource {
         this.value = type.value;
         this.minPower = type.minPower;
         this.detonTime = type.detonTime;
-        this.initDetonTime = this.detonTime;
-        this.radius = type.explodingRadius;
-        this.explodingTime = type.explodingTime;
+        this.initDetonTime = this.detonTime * (1 - difficulty);
+        this.radius = type.explodingRadius * (1 + difficulty);
+        this.explodingTime = type.explodingTime * (1 + difficulty);
         this.aliveTime = type.aliveTime;
         this.damage = type.damage;
         this.framesPerDamage = type.framesPerDamage;

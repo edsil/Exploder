@@ -1,4 +1,21 @@
-class Exploder {
+import { controlers } from "./settings.js";
+import { options } from "./settings.js";
+import { soundFxs } from "./sound.js";
+const hurt = new soundFxs("./Sounds/hurt.mp3", 10);
+
+// Positions of the main character
+const positions = {
+    UP_WALKING: 0,
+    LEFT_WALKING: 1,
+    DOWN_WALKING: 2,
+    RIGHT_WALKING: 3,
+    UP_STOPPED: 4,
+    LEFT_STOPPED: 5,
+    DOWN_STOPPED: 6,
+    RIGHT_STOPPED: 7,
+};
+
+export class Exploder {
     constructor(eType, x, y) {
         this.power = eType.power;
         this.health = eType.health;
@@ -9,9 +26,16 @@ class Exploder {
         this.y = y;
         this.preX = this.x;
         this.preY = this.y;
-        this.sprites = [eType.spriteUpWalking, eType.spriteLeftWalking, eType.spriteDownWalking,
-        eType.spriteRightWalking, eType.spriteUpStopped, eType.spriteLeftStopped,
-        eType.spriteDownStopped, eType.spriteRightStopped];
+        this.sprites = [
+            eType.spriteUpWalking,
+            eType.spriteLeftWalking,
+            eType.spriteDownWalking,
+            eType.spriteRightWalking,
+            eType.spriteUpStopped,
+            eType.spriteLeftStopped,
+            eType.spriteDownStopped,
+            eType.spriteRightStopped,
+        ];
         this.lastMove = positions.DOWN_STOPPED;
         this.currSprite = this.sprites[this.lastMove];
         this.width = 10000;
@@ -24,7 +48,7 @@ class Exploder {
         this.dangerFrame = 0;
     }
 
-    update() {
+    update(canvas, frame) {
         if (this.lastMove < positions.UP_STOPPED) {
             this.lastMove += 4;
         }
@@ -45,7 +69,7 @@ class Exploder {
             this.lastMove = positions.RIGHT_WALKING;
         }
         this.currSprite = this.sprites[this.lastMove];
-        if (wrap) {
+        if (options.wrap) {
             if (this.x < 0) {
                 this.x = canvas.width;
             } else if (this.x > canvas.width) {
@@ -69,7 +93,9 @@ class Exploder {
             }
         }
         if (this.currentInDanger) {
-            if (this.dangerFrame < (frame - 1)) {
+            if (this.dangerFrame < 0) {
+                this.dangerFrame = frame;
+            } else if (this.dangerFrame < frame - 1) {
                 this.currentInDanger = false;
             }
         }
@@ -78,12 +104,11 @@ class Exploder {
     hurtHealth(value) {
         this.health -= value;
         hurt.play();
-
     }
 
     inDanger() {
         this.currentInDanger = true;
-        this.dangerFrame = frame;
+        this.dangerFrame = -1; // -1 is checked by the next update() to set and sets it to the frame number that is passed there
     }
 
     draw(ctx2D) {

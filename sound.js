@@ -1,5 +1,5 @@
 // Sound Effects
-class soundFxs {
+export class soundFxs {
     constructor(soundFile, instances) {
         this.instances = instances;
         this.samples = [];

@@ -49,12 +49,18 @@ body {
 #options{
     z-index: 1;
     position: absolute;
+    background-color: #093d32;
     top: 60px;
     left: 240px;
-    border:7px rgb(64, 41, 196);
+    border:7px rgb(32, 7, 173);
     width: 800px;
     height: 600px;
     font-family: 'Orbitron', sans-serif;
 }
+.expl-button {
+    position: absolute;
+    background: rgb(109, 150, 119);
+    padding: 0 4px;
+  }
 
 

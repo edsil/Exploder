@@ -1,6 +1,6 @@
 // Natural Resources
 class NatResource {
-    constructor(type, x, y) {
+    constructor(type, difficulty, x, y) {
         this.sprExplosion = new spriteAnimator(...type.paramExplosion);
         this.sprActivated = new spriteAnimator(...type.paramResActivated);
         this.sprResource = new spriteAnimator(...type.paramResource);
@@ -19,6 +19,7 @@ class NatResource {
         this.height = Math.floor(type.height * cellSize);
         this.x = x;
         this.y = y;
+        this.difficulty = difficulty;
         this.expired = false;
         this.activated = false;
         this.exploding = false;
